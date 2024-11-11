@@ -1,0 +1,31 @@
+{
+  "name": "nodejs-oracle-ejs",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "SET UV_THREADPOOL_SIZE=10 && SET NODE_ENV=dev && nodemon -L --watch ./src --delay 1 --exec \"node\" src/app.js",
+    "stop": "taskkill /F /IM node.exe"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.1",
+    "oracledb": "^6.6.0",
+    "body-parser": "^1.19.0",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
+    "debug": "^4.3.2",
+    "express-session": "^1.17.2",
+    "helmet": "^4.6.0",
+    "reflect-metadata": "^0.1.13",
+    "server": "^1.0.41",
+    "uuid": "^8.3.2",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.5"
+  }
+}

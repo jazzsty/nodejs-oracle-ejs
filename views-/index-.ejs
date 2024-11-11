@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>측정소 정보 입력</title>
+</head>
+<body>
+    <h1>측정소 정보 입력</h1>
+    <form action="/save" method="POST">
+        <label for="id">id:</label>
+        <input type="number" id="id" name="id" required min="1" max="999"><br><br>
+
+        <label for="latitude">Latitude (위도):</label>
+        <input type="number" id="latitude" name="latitude" step="37.000001" required><br><br>
+
+        <label for="longitude">Longitude (경도):</label>
+        <input type="number" id="longitude" name="longitude" step="126.000001" required><br><br>
+
+        <button type="submit">저장</button>
+    </form>
+</body>
+</html>
