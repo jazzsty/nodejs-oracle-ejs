@@ -61,11 +61,11 @@ export class IndexViewController {
         try {
             let result;
             // DB 연결 풀에서 연결을 가져옴
-            // conn = await this.getDbConnection();
-            // console.log("Oracle DB 연결 성공!!");
-             // DB 연결 풀에서 연결을 가져옴
             conn = await this.getDbConnection();
             console.log("Oracle DB 연결 성공!!");
+            // DB 연결 풀에서 연결을 가져옴
+            // conn = await this.getDbConnection();
+            // console.log("Oracle DB 연결 성공!!");
         
             for (const station of stations) {
                 if (!station.seq) {
