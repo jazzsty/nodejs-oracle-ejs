@@ -31,8 +31,13 @@ export class IndexViewController {
 
         this.router.post('/save-stations', (req, res) => {
             console.log('req.body: ' + JSON.stringify(req.body));
-            this.saveStationData(req, res);
+            this._saveStations(req, res);
         });
+
+        this.router.get('/load-stations', (req, res) => {
+            console.log('req.body: ' + req.body);
+            this._loadStations(req, res);
+        })
 
     }
 
@@ -53,8 +58,47 @@ export class IndexViewController {
         }
     }
 
+    // 측정소 데이터를 가져오는 API
+    async _loadStations(req, res) {
+
+        let conn;
+        try {
+            // const pool = oracledb.getPool();
+            // conn = await pool.getConnection(dbconfig);
+            conn = await this.getDbConnection();
+            console.log("Oracle DB 연결 성공!!");
+            
+            // 데이터베이스에서 측정소 목록을 쿼리
+            const query = 'SELECT seq, latitude, longitude FROM stations_info';
+            const result = await conn.execute(query); // 데이터베이스에서 측정소 목록 쿼리
+
+            // 결과 확인
+            console.log('Query result:', result.rows);
+            // 이미 응답을 보냈는지 확인 (중복 응답 방지)
+            if (res.headersSent) {
+                console.error("Headers already sent, cannot send response again.");
+                return;
+            }
+            // JSON 형식으로 응답
+            res.json(result.rows);
+        } catch (error) {
+            console.error('Error loading stations info:', error);
+            res.status(500).json({ error: 'Failed to load stations info' });
+        } finally {
+            if (conn) {
+                try {
+                    await conn.close();
+                    console.log("DB 연결 해제 완료");
+                } catch (err) {
+                    console.error("DB 해제 중 에러: ", err);
+                }
+            }
+        }
+    }
+
+
     // 데이터 저장 함수
-    async saveStationData(req, res) {
+    async _saveStations(req, res) {
         const stations = req.body;
         console.log('stations: ' + JSON.stringify(stations));
         let conn;

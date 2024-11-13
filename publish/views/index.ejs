@@ -24,7 +24,7 @@
     </footer>
 
     <script src="/js/page/footer.js"></script>
-    <script>
+    <!-- <script>
         const createCheckboxes = (start, end, checkedUntil) => {
             const container = document.getElementById("measurementStations");
 
@@ -88,7 +88,7 @@
 
         // 체크박스를 1~35까지 생성하되, 1~29는 선택된 상태로 표시
         createCheckboxes(1, 1, 1);
-    </script>
+    </script> -->
 
     <script>
     // 서버에 측정소 데이터를 저장하는 함수
@@ -145,13 +145,78 @@
         
     };
 
-    
+    // 프론트엔드 JavaScript 파일에 추가
+    // async function loadMeasurementStations() {
+    //     try {
+    //         const response = await fetch('/load-stations');
+    //         if (!response.ok) {
+    //             throw new Error('Failed to load measurement stations');
+    //         }
+    //         const data = await response.json();
+    //         console.log(data);
+    //         // 여기서 데이터를 화면에 표시하는 로직 추가
+    //     } catch (error) {
+    //         console.error('Error loading measurement stations:', error);
+    //     }
+    // }
+
+
+    async function loadMeasurementStations() {
+        try {
+            const response = await fetch('/load-stations');
+            if (!response.ok) throw new Error('측정소 데이터를 불러오는데 실패했습니다.');
+
+            const stations = await response.json();
+            console.log('stations: ' + JSON.stringify(stations));
+
+
+            const container = document.getElementById("measurementStations");
+            container.innerHTML = '';
+
+            stations.forEach(station => {
+                const listItem = document.createElement("div");
+                listItem.classList.add("list-group-item", "d-flex", "align-items-center", "gap-2");
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.classList.add("form-check-input", "me-3");
+                checkbox.name = "check";
+                checkbox.value = station.seq;
+
+                const idInput = document.createElement("input");
+                idInput.type = "text";
+                idInput.classList.add("form-control", "text-center");
+                idInput.value = station.seq;
+                idInput.readOnly = true;
+
+                const latInput = document.createElement("input");
+                latInput.type = "text";
+                latInput.classList.add("form-control", "text-center");
+                latInput.value = station.latitude;
+
+                const lonInput = document.createElement("input");
+                lonInput.type = "text";
+                lonInput.classList.add("form-control", "text-center");
+                lonInput.value = station.longitude;
+
+                listItem.appendChild(idInput);
+                listItem.appendChild(checkbox);
+                listItem.appendChild(latInput);
+                listItem.appendChild(lonInput);
+
+                container.appendChild(listItem);
+            });
+        } catch (error) {
+            console.error(error);
+            alert("측정소 데이터를 불러오는 중 오류가 발생했습니다.");
+        }
+    }
 
     // DOMContentLoaded 이벤트를 활용해 HTML이 완전히 로드된 후에 코드를 실행하도록 설정
     document.addEventListener("DOMContentLoaded", () => {
         
         // 페이지 로드 시 측정소 데이터 로드
-        // loadMeasurementStations();
+        loadMeasurementStations();
 
         // 버튼에 이벤트 리스너 추가
         // const addButton = document.querySelector("button.btn-primary");
