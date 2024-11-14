@@ -71,14 +71,14 @@ export class IndexViewController {
             // 데이터베이스에서 측정소 목록을 쿼리
             const query = 'SELECT seq, latitude, longitude FROM stations_info';
             const result = await conn.execute(query); // 데이터베이스에서 측정소 목록 쿼리
-
+            console.log('1 result.rows.length: ' + result.rows.length);
             // 결과 확인
-            console.log('Query result:', result.rows);
-            // 이미 응답을 보냈는지 확인 (중복 응답 방지)
-            if (res.headersSent) {
-                console.error("Headers already sent, cannot send response again.");
-                return;
+            if (result.rows.length === 0) {
+                console.log('2 result.rows.length: ' + result.rows.length);
+                return res.json([]);  // 데이터가 없으면 빈 배열 반환
             }
+            console.log('Query result:', result.rows);
+
             // JSON 형식으로 응답
             res.json(result.rows);
         } catch (error) {
@@ -102,8 +102,9 @@ export class IndexViewController {
         const stations = req.body;
         console.log('stations: ' + JSON.stringify(stations));
         let conn;
+        let rowsAffected = 0;
         try {
-            let result;
+            // let rowsAffected;
             // DB 연결 풀에서 연결을 가져옴
             conn = await this.getDbConnection();
             console.log("Oracle DB 연결 성공!!");
@@ -120,37 +121,49 @@ export class IndexViewController {
                 console.log('check step 0');
                 console.log('Updating station with seq:', station.seq);
                 console.log('Latitude:', station.latitude, 'Longitude:', station.longitude);
-                result = await conn.execute(
+                const updateResult = await conn.execute(
                     `UPDATE stations_info SET latitude = :latitude, longitude = :longitude WHERE seq = :seq`,
                     { latitude: station.latitude, longitude: station.longitude, seq: station.seq }
                 );
                 // await conn.commit();
                 console.log('check step 1');
-                console.log(`update result.rowsAffected: ${result.rowsAffected}`);
+                console.log(`update updateResult.rowsAffected: ${updateResult.rowsAffected}`);
             
                 // 수동으로 커밋
-                if (result.rowsAffected > 0) {
+                // if (updateResult.rowsAffected > 0) {
+                //     await conn.commit();
+                //     console.log("UPDATE 커밋 성공");
+                // }
+                if (updateResult && updateResult.rowsAffected > 0) {
+                    rowsAffected += updateResult.rowsAffected;
+                    console.log(`updateResult.rowsAffected >>> ${updateResult.rowsAffected}개의 행이 입력되었습니다.`);
                     await conn.commit();
                     console.log("UPDATE 커밋 성공");
                 }
             
                 // 만약 업데이트된 데이터가 없으면 INSERT 실행
-                if (result.rowsAffected === 0) {
+                if (updateResult.rowsAffected === 0) {
                     console.log('check step 2');
-                    result = await conn.execute(
+                    const insertResult = await conn.execute(
                         `INSERT INTO stations_info (seq, latitude, longitude)
                         VALUES (:seq, :latitude, :longitude)`,
                         { seq: station.seq, latitude: station.latitude, longitude: station.longitude }
                     );
-            
+                    if (insertResult && insertResult.rowsAffected > 0) {
+                        rowsAffected += insertResult.rowsAffected;
+                        console.log(`insertResult.rowsAffected >>> ${insertResult.rowsAffected}개의 행이 입력되었습니다.`);
+                        await conn.commit();
+                        console.log("INSERT 커밋 성공");
+                    }
                     // 수동으로 커밋
-                    await conn.commit();
-                    console.log(`insert result.rowsAffected: ${result.rowsAffected}`);
+                    // await conn.commit();
+                    // console.log(`insert result.rowsAffected: ${insertResult.rowsAffected}`);
                 }
             }
             // 응답 보내기
             // res.send(`${result.rowsAffected}개의 행이 입력되었습니다.`);
-            res.json({ message: `${result.rowsAffected}개의 행이 입력되었습니다.`, affectedRows: result.rowsAffected });
+            console.log(`>>>>>>>>> ${rowsAffected}개의 행이 입력되었습니다.`);
+            res.json({ message: `${rowsAffected}개의 행이 입력되었습니다.` });
 
             console.log("DB 저장 완료");
         
