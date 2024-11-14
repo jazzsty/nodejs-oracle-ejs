@@ -9,10 +9,9 @@ import session from 'express-session';
 import compression from 'compression';
 import { v4 as uuidv4 } from 'uuid';
 import Logger from './util/logger.js';
-// import { NoiseApiController } from './controller/api/noise-controller.js';
-// import { IndexViewController } from './controller/views/index-controller-.js';
-import { IndexViewController } from './controller/index-controller.js';
-// import { Server as SocketIO } from 'socket.io';
+import { NoiseApiController } from './controller/api/noise-controller.js';
+import { IndexViewController } from './controller/views/index-controller.js';
+import { Server as SocketIO } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import oracledb from 'oracledb';
@@ -34,6 +33,7 @@ class App {
         console.log(`process.env.UV_THREADPOOL_SIZE: ${process.env.UV_THREADPOOL_SIZE}`);
 
         this.app = express();
+        this.noiseApiController = new NoiseApiController(); // noiseApiController 초기화 추가
         this._initMiddleware();
     }
 
@@ -178,12 +178,12 @@ class App {
         });
     }
 
-    // _apiServer() {
-    //     this.noiseApiController = new NoiseApiController();
+    _apiServer() {
+        this.noiseApiController = new NoiseApiController();
 
-    //     // const urlMapping = '/api';
-    //     this.app.use('/api/noise', this.noiseApiController.router()); // 소음측정 소켓 클라이언트 관리
-    // }
+        // const urlMapping = '/api';
+        this.app.use('/api/noise', this.noiseApiController.router()); // 소음측정 소켓 클라이언트 관리
+    }
 
     _ejsServer() {
         this.app.use(express.static(path.join(__dirname, `../publish/resources`))); // 정적파일 제공 경로 설정
@@ -192,52 +192,52 @@ class App {
         this.app.use('/', indexViewController.getRouter());
     }
 
-    // _runSocketIoServer() {
-    //     const io = new SocketIO(this.mainListener, { cors: { origin: '*' } });
+    _runSocketIoServer() {
+        const io = new SocketIO(this.mainListener, { cors: { origin: '*' } });
 
-    //     let resultFlag = false;
+        let resultFlag = false;
 
-    //     io.on('connection', (socket) => {
-    //         // 소음측정 socket error 발생 시
-    //         this.noiseApiController.on('noise-error', (message) => {
-    //             socket.emit('error', message);
-    //         });
-    //         // 소음측정 결과 저장 용
-    //         this.noiseApiController.on('noiseSampleMessage', (result) => {
-    //             if (resultFlag) {
-    //                 socket.emit('result', result);
-    //             }
-    //         });
-    //         // 결과보기 flag
-    //         socket.on('result', (flag) => {
-    //             resultFlag = flag;
-    //         });
-    //     });
-    // }
+        io.on('connection', (socket) => {
+            // 소음측정 socket error 발생 시
+            this.noiseApiController.on('noise-error', (message) => {
+                socket.emit('error', message);
+            });
+            // 소음측정 결과 저장 용
+            this.noiseApiController.on('noiseSampleMessage', (result) => {
+                if (resultFlag) {
+                    socket.emit('result', result);
+                }
+            });
+            // 결과보기 flag
+            socket.on('result', (flag) => {
+                resultFlag = flag;
+            });
+        });
+    }
 
     async run() {
         this.logger.info(`process.env.NODE_ENV : ${process.env.NODE_ENV}`);
         await this._runHttpsServer();
-        // this._runSocketIoServer();
+        this._runSocketIoServer();
 
-        // const errorHandler = (err, req, res, next) => {
-        //     const trackingId = uuidv4();
+        const errorHandler = (err, req, res, next) => {
+            const trackingId = uuidv4();
 
-        //     res.status(500).send(
-        //         `<h1>Internal Server Error</h1>
-        //         <p>If you report this error, please also report this
-        //         <i>tracking ID</i> which makes it possible to locate your session
-        //         in the logs which are available to the system administrator:
-        //         <b>${trackingId}</b></p>`
-        //     );
-        //     this.logger.error(
-        //         'Express error handler dump with tracking ID: %s, error dump: %o',
-        //         trackingId,
-        //         err
-        //     );
-        // };
+            res.status(500).send(
+                `<h1>Internal Server Error</h1>
+                <p>If you report this error, please also report this
+                <i>tracking ID</i> which makes it possible to locate your session
+                in the logs which are available to the system administrator:
+                <b>${trackingId}</b></p>`
+            );
+            this.logger.error(
+                'Express error handler dump with tracking ID: %s, error dump: %o',
+                trackingId,
+                err
+            );
+        };
 
-        // this.app.use(errorHandler);
+        this.app.use(errorHandler);
     }
 }
 

@@ -6,10 +6,6 @@ oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
 export class IndexViewController {
     constructor(app) {
-        // this.app = express();
-        // this.port = 3000;
-        // this.pool = null;
-
         // 미들웨어 설정
         // app.use(bodyParser.urlencoded({ extended: true }));
         // app.use(bodyParser.json());
@@ -17,9 +13,6 @@ export class IndexViewController {
         // 라우팅 설정
         this.router = express.Router();
         this.routes();
-
-        // 서버 시작 시 Connection Pool 생성
-        // this.createPool();
     }
 
     // 라우팅 설정
@@ -42,13 +35,12 @@ export class IndexViewController {
     }
 
     // 데이터베이스 연결 함수
-    async getDbConnection() {
+    async getDBConnection() {
         try {
             const pool = oracledb.getPool();
             if (!pool) {
                 throw new Error("Oracle DB 연결 풀이 생성되지 않았습니다.");
             }
-            // return await pool.getConnection();
             const conn = await pool.getConnection();
             // console.log("DB 연결 성공:", conn);  // 연결 성공 로그
             return conn;
@@ -63,13 +55,11 @@ export class IndexViewController {
 
         let conn;
         try {
-            // const pool = oracledb.getPool();
-            // conn = await pool.getConnection(dbconfig);
-            conn = await this.getDbConnection();
+            conn = await this.getDBConnection();
             console.log("Oracle DB 연결 성공!!");
             
             // 데이터베이스에서 측정소 목록을 쿼리
-            const query = 'SELECT seq, latitude, longitude FROM stations_info';
+            const query = 'SELECT seq, latitude, longitude FROM station_tbl';
             const result = await conn.execute(query); // 데이터베이스에서 측정소 목록 쿼리
             console.log('1 result.rows.length: ' + result.rows.length);
             // 결과 확인
@@ -104,13 +94,9 @@ export class IndexViewController {
         let conn;
         let rowsAffected = 0;
         try {
-            // let rowsAffected;
             // DB 연결 풀에서 연결을 가져옴
-            conn = await this.getDbConnection();
+            conn = await this.getDBConnection();
             console.log("Oracle DB 연결 성공!!");
-            // DB 연결 풀에서 연결을 가져옴
-            // conn = await this.getDbConnection();
-            // console.log("Oracle DB 연결 성공!!");
         
             for (const station of stations) {
                 if (!station.seq) {
@@ -122,21 +108,16 @@ export class IndexViewController {
                 console.log('Updating station with seq:', station.seq);
                 console.log('Latitude:', station.latitude, 'Longitude:', station.longitude);
                 const updateResult = await conn.execute(
-                    `UPDATE stations_info SET latitude = :latitude, longitude = :longitude WHERE seq = :seq`,
+                    `UPDATE station_tbl SET latitude = :latitude, longitude = :longitude WHERE seq = :seq`,
                     { latitude: station.latitude, longitude: station.longitude, seq: station.seq }
                 );
-                // await conn.commit();
                 console.log('check step 1');
                 console.log(`update updateResult.rowsAffected: ${updateResult.rowsAffected}`);
             
                 // 수동으로 커밋
-                // if (updateResult.rowsAffected > 0) {
-                //     await conn.commit();
-                //     console.log("UPDATE 커밋 성공");
-                // }
                 if (updateResult && updateResult.rowsAffected > 0) {
                     rowsAffected += updateResult.rowsAffected;
-                    console.log(`updateResult.rowsAffected >>> ${updateResult.rowsAffected}개의 행이 입력되었습니다.`);
+                    console.log(`updateResult.rowsAffected >>> ${updateResult.rowsAffected}개의 행이 수정되었습니다.`);
                     await conn.commit();
                     console.log("UPDATE 커밋 성공");
                 }
@@ -145,25 +126,22 @@ export class IndexViewController {
                 if (updateResult.rowsAffected === 0) {
                     console.log('check step 2');
                     const insertResult = await conn.execute(
-                        `INSERT INTO stations_info (seq, latitude, longitude)
+                        `INSERT INTO station_tbl (seq, latitude, longitude)
                         VALUES (:seq, :latitude, :longitude)`,
                         { seq: station.seq, latitude: station.latitude, longitude: station.longitude }
                     );
+                    // 수동으로 커밋
                     if (insertResult && insertResult.rowsAffected > 0) {
                         rowsAffected += insertResult.rowsAffected;
                         console.log(`insertResult.rowsAffected >>> ${insertResult.rowsAffected}개의 행이 입력되었습니다.`);
                         await conn.commit();
                         console.log("INSERT 커밋 성공");
                     }
-                    // 수동으로 커밋
-                    // await conn.commit();
-                    // console.log(`insert result.rowsAffected: ${insertResult.rowsAffected}`);
                 }
             }
             // 응답 보내기
-            // res.send(`${result.rowsAffected}개의 행이 입력되었습니다.`);
-            console.log(`>>>>>>>>> ${rowsAffected}개의 행이 입력되었습니다.`);
-            res.json({ message: `${rowsAffected}개의 행이 입력되었습니다.` });
+            console.log(`${rowsAffected}개의 행이 저장되었습니다.`);
+            res.json({ message: `${rowsAffected}개의 행이 저장되었습니다.` });
 
             console.log("DB 저장 완료");
         

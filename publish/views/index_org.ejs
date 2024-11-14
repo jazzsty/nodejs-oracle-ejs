@@ -3,122 +3,21 @@
 
 <head>
     <%- include('./includes/head'); %>
-    <script src="/js/page/index.js"></script>
+    <!-- <script src="/js/page/index.js"></script> -->
 </head>
 
 <body>
     <header>
-        <!-- <%- include('./includes/header'); %> -->
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>인천공항 소음측정 클라이언트</title>
-        <link rel="stylesheet" href="/css/bootstrap.min.css">
-        <script src="/js/jquery-3.6.0.min.js"></script>
-        <script src="/js/popper.min.js"></script>
-        <script src="/js/bootstrap.min.js"></script>
-        <script src="/js/socket.io.min.js"></script>
-        <!-- <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery.form/3.51/jquery.form.min.js"></script> -->
-    </header>
-    <!-- <div class='container'>
-            <div id="measurementStations">
-                체크박스와 리스트가 JavaScript를 통해 여기에 추가됩니다
-            </div>
-    </div> -->
-    <!-- <header>
         <%- include('./includes/header'); %>
-    </header> -->
+    </header>
     <div class='container'>
-        <div class='card w-100'>
-            <div class='card-header'>
-                인천공항 소음측정 클라이언트
+        <!-- <div class='card w-100'> -->
+
+            <div id="measurementStations">
+                <!-- 체크박스와 리스트가 JavaScript를 통해 여기에 추가됩니다 -->
             </div>
-            <div class='card-body'>
-                <table class="table text-center">
-                    <colgroup>
-                        <col style="width: 33%;" />
-                        <col style="width: 34%;" />
-                        <col style="width: 33%;" />
-                    </colgroup>
-                    <tbody id="noiseForm">
-                        <tr>
-                            <th class="align-middle">호스트(Host)</th>
-                            <td colspan="2">
-                                <input type="text" id="host" name="host" class="form-control" placeholder="58.225.62.172" value="58.225.62.172" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <th class="align-middle">포트(Port)</th>
-                            <td colspan="2">
-                                <input type="text" id="port" name="port" class="form-control" placeholder="8080" value="8443" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <th class="align-middle">사이트(Site)</th>
-                            <td colspan="2">
-                                <input type="text" id="site" name="site" class="form-control" placeholder="ICN" value="ICN" />
-                            </td>
-                        </tr>
-                        <tr>
-                            <th class="align-middle">측정소</th>
-                            <td colspan="2">
-                                <div id="measurementStations" class="list-group">
-                                    <!-- 체크박스와 리스트가 JavaScript를 통해 여기에 추가됩니다 -->
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class='card w-100' style="height: 488px;">
-            <div class='card-header'>
-                인천공항 소음측정 결과
-            </div>
-            <div class="d-flex justify-content-center mt-2" style="padding-top: 15px;">
-                <button type="button" id="startBtn" class="btn btn-lg btn-info" style="margin-right: 10px; width: 200px;">소음측정 시작</button>
-                <button type="button" id="stopBtn" class="btn btn-lg btn-info" style="margin-right: 10px; width: 200px;" disabled>소음측정 중지</button>
-                <button type="button" id="resultStartBtn" class="btn btn-lg btn-info" style="margin-right: 10px; width: 200px;">결과보기</button>
-                <button type="button" id="resultStopBtn" class="btn btn-lg btn-info" style="display: none; width: 200px;">결과보기 중지</button>
-            </div>
-            <div class='card-body'>
-                <table class="table text-center">
-                    <colgroup>
-                        <col style="width: 33%;" />
-                        <col />
-                    </colgroup>
-                    <tbody style="border-bottom-width: -56px;">
-                        <tr>
-                            <th>에러 메시지</th>
-                            <td id="resultError"></td>
-                        </tr>
-                        <tr>
-                            <th>실행횟수</th>
-                            <td id="resultAll">0</td>
-                        </tr>
-                        <tr>
-                            <th>성공횟수</th>
-                            <td id="resultSuccess">0</td>
-                        </tr>
-                        <tr>
-                            <th>실패횟수</th>
-                            <td id="resultFail">0</td>
-                        </tr>
-                        <tr>
-                            <th>예외횟수</th>
-                            <td id="resultIgnore">0</td>
-                        </tr>
-                        <tr>
-                            <th>측정값 음수</th>
-                            <td id="resultMinus">0</td>
-                        </tr>
-                        <tr>
-                            <th>측정값 초과</th>
-                            <td id="resultOver">0</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+
+        <!-- </div> -->
     </div>
     <footer>
         <%- include('./includes/footer'); %>
@@ -468,7 +367,7 @@
         if (addButton) addButton.addEventListener("click", addRow);
         if (deleteButton) deleteButton.addEventListener("click", deleteRow);
         if (saveButton) saveButton.addEventListener("click", saveMeasurementStations);
-
+        
     });
     </script>
 </body>
