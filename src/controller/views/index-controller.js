@@ -11,23 +11,27 @@ export class IndexViewController {
         // app.use(bodyParser.json());
 
         // 라우팅 설정
-        this.router = express.Router();
-        this.routes();
+        this._router = express.Router();
+        this._initRoutes();
+    }
+
+    router() {
+        return this._router;
     }
 
     // 라우팅 설정
-    routes() {
+    _initRoutes() {
         // 홈 페이지 (HTML 폼을 EJS로 렌더링)
-        this.router.get('/', (req, res) => {
+        this._router.get('/', (req, res) => {
             return res.render('index', { isLogin: false });
         });
 
-        this.router.post('/save-stations', (req, res) => {
+        this._router.post('/save-stations', (req, res) => {
             console.log('req.body: ' + JSON.stringify(req.body));
             this._saveStations(req, res);
         });
 
-        this.router.get('/load-stations', (req, res) => {
+        this._router.get('/load-stations', (req, res) => {
             console.log('req.body: ' + req.body);
             this._loadStations(req, res);
         })
@@ -161,9 +165,4 @@ export class IndexViewController {
         }
     }
 
-    // 라우터 객체 반환
-    getRouter() {
-        return this.router;
-    }
-    
 }

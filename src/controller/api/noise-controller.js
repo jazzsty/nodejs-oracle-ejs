@@ -7,7 +7,6 @@ import dbconfig from '../../config/dbconfig.js';
 
 export class NoiseApiController extends EventEmitter {
     constructor() {
-        console.log('check step constructor()');
         super();
         this.logger = new Logger('NoiseApiController');
         this.setMaxListeners(Infinity);
@@ -37,9 +36,7 @@ export class NoiseApiController extends EventEmitter {
     }
 
     _initRoutes() {
-        console.log('check step _initRouters()');
         this._router.post('/start', (req, res) => {
-            console.log('req.body >>>>>> :' + req.body);
             const { host, port, site, centers } = req.body;
 
             this._socketClose();
@@ -71,7 +68,7 @@ export class NoiseApiController extends EventEmitter {
 
     async _getNoiseSample(req, { host, port, site, centers }) {
         const url = `ws://${host}:${port}/${site}/urbantraffic/noisesamples`;
-        console.log('_getNoiseSample >>> url: ' + url);
+        // console.log('_getNoiseSample >>> url: ' + url);
         this.socket = new WebSocket(url);
 
         this.socket.onerror = (evt) => {
@@ -82,14 +79,11 @@ export class NoiseApiController extends EventEmitter {
         this.socket.onclose = (evt) => {
             this.logger.debug(`WebSocket close code >> : ${evt.code}`);
             this.logger.debug(`WebSocket close reason >> : ${evt.reason}`);
-            console.log(`WebSocket close code >> : ${evt.code}`);
-            console.log(`WebSocket close reason >> : ${evt.reason}`);
         };
 
         this.socket.onmessage = async (evt) => {
             const message = JSON.parse(evt.data);
-            // this.logger.debug(`message >> : ${message}`);
-            // console.log(`message >> :  ${JSON.stringify(message)}`);
+            this.logger.debug(`message >> : ${message}`);
             this.noiseMessageResult.all += 1;
 
             if (message.sample < 0) {

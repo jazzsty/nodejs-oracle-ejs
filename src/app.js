@@ -96,7 +96,7 @@ class App {
 
     async _runHttpsServer() {
         this._ejsServer();
-        // this._apiServer();
+        this._apiServer();
 
         this.mainListener = createServer(this.app); // http 서버 설정
 
@@ -115,7 +115,7 @@ class App {
             this.logger.info(`Oracle createPool() 성공!!`);
 
             // 10초마다 현재 연결 풀 통계를 출력
-            // setInterval(() => this._printPoolStatistics(), 10000); // this 바인딩을 위해 화살표 함수 사용
+            setInterval(() => this._printPoolStatistics(), 10000); // this 바인딩을 위해 화살표 함수 사용
         } catch (e) {
             this.logger.error(`Oracle createPool() 연결 실패: ${e.message}`);
             throw e; // by jazzsty
@@ -187,9 +187,10 @@ class App {
 
     _ejsServer() {
         this.app.use(express.static(path.join(__dirname, `../publish/resources`))); // 정적파일 제공 경로 설정
-        // this.app.use('/', new IndexViewController(this.app).router());
+        // this.app.use('/', new IndexViewController().router());
         const indexViewController = new IndexViewController(this.app);
-        this.app.use('/', indexViewController.getRouter());
+        this.app.use('/', indexViewController.router());
+
     }
 
     _runSocketIoServer() {

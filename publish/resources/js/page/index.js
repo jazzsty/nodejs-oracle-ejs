@@ -63,6 +63,10 @@ function noiseSampleStart() {
         return;
     }
 
+    // console.log('host: ' + host.val);
+    // console.log('port: ' + port.val);
+    // console.log('site: ' + site.val);
+    // console.log('centers.length: ' + centers.length);
     var centerVals = [];
     if (centers.length < 1) {
         alert('측정소를 최소 1개를 선택해 주세요.');
@@ -79,6 +83,7 @@ function noiseSampleStart() {
         site: site.val(),
         centers: centerVals
     });
+    // console.log('param: ' + param);
     $.ajax({
         type: 'post',
         url: '/api/noise/start',
