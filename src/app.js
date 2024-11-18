@@ -9,6 +9,7 @@ import session from 'express-session';
 import compression from 'compression';
 import { v4 as uuidv4 } from 'uuid';
 import Logger from './util/logger.js';
+import { createDBPool } from './util/dbConnection.js'; // DB 연결 관리 파일 추가
 import { NoiseApiController } from './controller/api/noise-controller.js';
 import { IndexViewController } from './controller/views/index-controller.js';
 import { Server as SocketIO } from 'socket.io';
@@ -95,18 +96,18 @@ class App {
 
         let pool;
         try {
-            // await oracledb.createPool(dbconfig);
-            await oracledb.createPool({
-                user: dbconfig.user,
-                password: dbconfig.password,
-                connectString: dbconfig.connectString,
-                poolAlias: 'default', // 별칭 설정
-                poolMin: 1,          // 최소 연결 수
-                poolMax: 5,         // 최대 연결 수를 늘립니다.s
-                poolIncrement: 1,    // 연결이 필요할 때 추가되는 수
-                queueMax: 100000,      // 대기열의 최대 길이를 늘립니다.
-                queueTimeout: 120000 // 대기열 타임아웃 증가 (120초)
-            });
+            // await oracledb.createPool({
+            //     user: dbconfig.user,
+            //     password: dbconfig.password,
+            //     connectString: dbconfig.connectString,
+            //     poolAlias: 'default', // 별칭 설정
+            //     poolMin: 1,          // 최소 연결 수
+            //     poolMax: 5,         // 최대 연결 수를 늘립니다.s
+            //     poolIncrement: 1,    // 연결이 필요할 때 추가되는 수
+            //     queueMax: 100000,      // 대기열의 최대 길이를 늘립니다.
+            //     queueTimeout: 120000 // 대기열 타임아웃 증가 (120초)
+            // });
+            await createDBPool(); // DB 연결 풀 초기화
             this.logger.info(`Oracle createPool() 성공!!`);
 
             // 10초마다 현재 연결 풀 통계를 출력

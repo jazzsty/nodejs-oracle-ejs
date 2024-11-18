@@ -1,14 +1,24 @@
 import express from 'express';
 // import bodyParser from 'body-parser'; // body-parser 추가
 import oracledb from 'oracledb';
+import Logger from '../../util/logger.js';
+import CacheManager from '../../util/cacheManager.js';
+import { getDBConnection } from '../../util/dbConnection.js'; // DB 연결 관리 파일 추가
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
 export class IndexViewController {
     constructor(app) {
+        // 로그 설정
+        this.logger = new Logger();
+
         // 미들웨어 설정
         // app.use(bodyParser.urlencoded({ extended: true }));
         // app.use(bodyParser.json());
+
+        // 캐시 설정
+        this.cacheManager = new CacheManager();
+        this.stationCache = this.cacheManager.getCache();
 
         // 라우팅 설정
         this._router = express.Router();
@@ -56,39 +66,41 @@ export class IndexViewController {
     }
 
     // 데이터베이스 연결 함수
-    async getDBConnection() {
-        try {
-            const pool = oracledb.getPool('default');
-            console.log('0 pool.poolAlias: '+ pool.poolAlias);
-            if (!pool) {
-                throw new Error("Oracle DB 연결 풀이 생성되지 않았습니다.");
-            }
-            const conn = await pool.getConnection();
-            console.log("0 DB 연결 성공");  // 연결 성공 로그
-            return conn;
-        } catch (err) {
-            console.error("DB 연결 실패: ", err);
-            throw err;
-        }
-    }
+    // async getDBConnection() {
+    //     try {
+    //         const pool = oracledb.getPool('default');
+    //         console.log('0 pool.poolAlias: '+ pool.poolAlias);
+    //         if (!pool) {
+    //             throw new Error("Oracle DB 연결 풀이 생성되지 않았습니다.");
+    //         }
+    //         const conn = await pool.getConnection();
+    //         console.log("0 DB 연결 성공");  // 연결 성공 로그
+    //         return conn;
+    //     } catch (err) {
+    //         console.error("DB 연결 실패: ", err);
+    //         throw err;
+    //     }
+    // }
 
     // 측정소 데이터를 가져오는 API
     async _loadStations(req, res) {
 
         let conn;
         try {
-            conn = await this.getDBConnection();
+            // conn = await this.getDBConnection();
+            conn = await getDBConnection();
+
             console.log("Oracle DB 연결 성공!!");
             
             // 측정소 목록을 쿼리
             const serverResult = await conn.execute('SELECT host, port, site FROM server_tbl');  // 서버 정보 쿼리
 
-            const stationsResult = await conn.execute('SELECT seq, latitude, longitude FROM station_tbl'); // 데이터베이스에서 측정소 목록 쿼리
+            const stationsResult = await conn.execute('SELECT seq, latitude, longitude FROM station_tbl ORDER BY seq ASC'); // 데이터베이스에서 측정소 목록 쿼리
 
             const server = serverResult.rows[0];
             const stations = stationsResult.rows;
-            console.log('Query server:', server);
-            console.log('Query stations:', stations);
+            // console.log('Query server:', server);
+            // console.log('Query stations:', stations);
 
             // JSON 형식으로 응답
             // res.json(result.rows);
@@ -115,7 +127,8 @@ export class IndexViewController {
         let rowsAffected = 0;
         try {
             // DB 연결 풀에서 연결을 가져옴
-            conn = await this.getDBConnection();
+            // conn = await this.getDBConnection();
+            conn = await getDBConnection();
             console.log("Oracle DB 연결 성공!!");
         
             // UPDATE 쿼리 실행
@@ -168,7 +181,8 @@ export class IndexViewController {
         let rowsAffected = 0;
         try {
             // DB 연결 풀에서 연결을 가져옴
-            conn = await this.getDBConnection();
+            // conn = await this.getDBConnection();
+            conn = await getDBConnection();
             console.log("Oracle DB 연결 성공!!");
         
             for (const station of stations) {
@@ -212,10 +226,10 @@ export class IndexViewController {
                     }
                 }
 
-                // 캐시 초기화 및 데이터 추가
-                const key = `${LATITUDE},${LONGITUDE}`;
-                // console.log('key: ', key);
-                this.stationCache.set(key, SEQ);
+                // // 캐시 초기화 및 데이터 추가
+                const key = `${station.latitude},${station.longitude}`;
+                console.log('_saveStationInfo: key: ', key);
+                this.stationCache.set(key, station.seq);
                 this.logger.info(`_saveStationInfo : Station cache loaded with ${this.stationCache.size} entries.`);
             }
 

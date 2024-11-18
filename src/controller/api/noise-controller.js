@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import Logger from '../../util/logger.js';
+import CacheManager from '../../util/cacheManager.js';
+import { getDBConnection } from '../../util/dbConnection.js'; // DB 연결 관리 파일 추가
 import WebSocket from 'ws';
 import EventEmitter from 'events';
 import oracledb from 'oracledb';
@@ -30,8 +32,9 @@ export class NoiseApiController extends EventEmitter {
 
         this._initRoutes();
 
-        this.stationCache = new Map(); // 캐시로 사용 할 Map
-
+        // this.stationCache = new Map(); // 캐시로 사용 할 Map
+        this.cacheManager = new CacheManager();
+        this.stationCache = this.cacheManager.getCache();
         this._loadStationCache(); // 초기 로드
     }
 
@@ -70,23 +73,6 @@ export class NoiseApiController extends EventEmitter {
         };
     }
 
-    // 데이터베이스 연결 함수
-    async getDBConnection() {
-        try {
-            const pool = oracledb.getPool('default');
-            // console.log('pool.poolAlias: '+ pool.poolAlias);
-            if (!pool) {
-                throw new Error("Oracle DB 연결 풀이 생성되지 않았습니다.");
-            }
-            const conn = await pool.getConnection();
-            // console.log("DB 연결 성공:", conn);  // 연결 성공 로그
-            return conn;
-        } catch (err) {
-            console.error("DB 연결 실패: ", err);
-            throw err;
-        }
-    }
-
     async _loadStationCache() {
         console.log('check step _loadStationCache');
         let conn;
@@ -94,7 +80,8 @@ export class NoiseApiController extends EventEmitter {
             // const pool = oracledb.getPool('default');
             // console.log('1 pool.poolAlias: '+ pool.poolAlias);
             // conn = await pool.getConnection();
-            conn = await this.getDBConnection();
+            // conn = await this.getDBConnection();
+            conn = await getDBConnection();
             // console.log("1 Oracle DB 연결 성공!!");
 
             // console.log("현재 연결 풀 캐시:", oracledb.getPool().poolAlias);
@@ -163,7 +150,8 @@ export class NoiseApiController extends EventEmitter {
 
             const anomsId = this._getAnomsId(message.id, message.lat, message.lon);
             // console.log('anomsId: ' + anomsId);
-            if (!centers.includes(anomsId)) {
+            // if (!centers.includes(anomsId)) {
+            if (!anomsId) {
                 this.logger.error(`무시된 측정값: ${JSON.stringify({ ...message, id: anomsId })}`);
                 this.noiseMessageResult.ignore += 1;
                 this.emit('noiseSampleMessage', this.noiseMessageResult);
@@ -223,7 +211,8 @@ export class NoiseApiController extends EventEmitter {
             // const pool = oracledb.getPool('default');
             // console.log('2 pool.poolAlias: '+ pool.poolAlias);
             // conn = await pool.getConnection();
-            conn = await this.getDBConnection();
+            // conn = await this.getDBConnection();
+            conn = await getDBConnection();
             // console.log("2 Oracle DB 연결 성공!");
 
             const sql = `INSERT INTO NOISE_A_1S_SAMPLE_TEST (insertdate, measuredate, nmt, value) 
@@ -236,7 +225,7 @@ export class NoiseApiController extends EventEmitter {
                             value: noiseSample.value
                         }, { autoCommit: true });
 
-            // console.log(`${result.rowsAffected}개의 행이 입력되었습니다.`);
+            console.log(`${result.rowsAffected}개의 행이 입력되었습니다.`);
         } catch (err) {
             console.error("DB 저장 중 에러 발생: ", err);
         } finally {
