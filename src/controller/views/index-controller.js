@@ -28,7 +28,24 @@ export class IndexViewController {
 
         this._router.post('/save-stations', (req, res) => {
             console.log('req.body: ' + JSON.stringify(req.body));
-            this._saveStations(req, res);
+            const { server, stations } = req.body;
+            // const server = req.body.server;
+            // const stations = req.body.stations;
+            console.log('server: ' + server);
+            console.log('statios: ' + stations);
+            try {
+                this._saveServerInfo(server);
+                // this._saveStations(req, res);
+                this._saveStationInfo(stations);
+                console.log("DB 저장 성공");
+                // res.status(200).json("저장 완료");
+                res.status(200).json({ success: true,  message: '저장이 완료되었습니다.' });
+            } catch (err) {
+                console.error("저장 중 오류 발생:", error);
+                res.status(500).json({ success: false, message: "저장이 실패되었습니다." });
+            }
+            // this._saveServerInfo(req, res);
+            // this._saveStationInfo(req, res);
         });
 
         this._router.get('/load-stations', (req, res) => {
@@ -41,12 +58,13 @@ export class IndexViewController {
     // 데이터베이스 연결 함수
     async getDBConnection() {
         try {
-            const pool = oracledb.getPool();
+            const pool = oracledb.getPool('default');
+            console.log('0 pool.poolAlias: '+ pool.poolAlias);
             if (!pool) {
                 throw new Error("Oracle DB 연결 풀이 생성되지 않았습니다.");
             }
             const conn = await pool.getConnection();
-            // console.log("DB 연결 성공:", conn);  // 연결 성공 로그
+            console.log("0 DB 연결 성공");  // 연결 성공 로그
             return conn;
         } catch (err) {
             console.error("DB 연결 실패: ", err);
@@ -62,19 +80,19 @@ export class IndexViewController {
             conn = await this.getDBConnection();
             console.log("Oracle DB 연결 성공!!");
             
-            // 데이터베이스에서 측정소 목록을 쿼리
-            const query = 'SELECT seq, latitude, longitude FROM station_tbl';
-            const result = await conn.execute(query); // 데이터베이스에서 측정소 목록 쿼리
-            console.log('1 result.rows.length: ' + result.rows.length);
-            // 결과 확인
-            if (result.rows.length === 0) {
-                console.log('2 result.rows.length: ' + result.rows.length);
-                return res.json([]);  // 데이터가 없으면 빈 배열 반환
-            }
-            console.log('Query result:', result.rows);
+            // 측정소 목록을 쿼리
+            const serverResult = await conn.execute('SELECT host, port, site FROM server_tbl');  // 서버 정보 쿼리
+
+            const stationsResult = await conn.execute('SELECT seq, latitude, longitude FROM station_tbl'); // 데이터베이스에서 측정소 목록 쿼리
+
+            const server = serverResult.rows[0];
+            const stations = stationsResult.rows;
+            console.log('Query server:', server);
+            console.log('Query stations:', stations);
 
             // JSON 형식으로 응답
-            res.json(result.rows);
+            // res.json(result.rows);
+            res.status(200).json({server, stations});
         } catch (error) {
             console.error('Error loading stations info:', error);
             res.status(500).json({ error: 'Failed to load stations info' });
@@ -90,10 +108,61 @@ export class IndexViewController {
         }
     }
 
+    // 서버 정보 저장 함수
+    async _saveServerInfo(server) {
+        console.log('server: ' + JSON.stringify(server));
+        let conn;
+        let rowsAffected = 0;
+        try {
+            // DB 연결 풀에서 연결을 가져옴
+            conn = await this.getDBConnection();
+            console.log("Oracle DB 연결 성공!!");
+        
+            // UPDATE 쿼리 실행
+            // console.log('check step 0');
+            // console.log('Updating server.host:', server.host);
+            // console.log('port:', server.port, 'site:', server.site);
 
-    // 데이터 저장 함수
-    async _saveStations(req, res) {
-        const stations = req.body;
+            const result = await conn.execute(`SELECT COUNT(*) AS count from server_tbl`);
+            const rowCount = result.rows[0].COUNT || 0;
+            if (rowCount > 0) {
+                const updateResult = await conn.execute(
+                    `UPDATE server_tbl SET host = :host, port = :port, site = :site`,
+                    { host: server.host, port: server.port, site: server.site }
+                );
+                console.log(`update updateResult.rowsAffected: ${updateResult.rowsAffected}`);
+            } else {
+                const insertResult = await conn.execute(
+                    `INSERT INTO server_tbl (host, port, site)
+                    VALUES (:host, :port, :site)`,
+                    { host: server.host, port: server.port, site: server.site }
+                );
+                console.log(`insertResult.rowsAffected >>> ${insertResult.rowsAffected}개의 행이 입력되었습니다.`);
+            }
+            await conn.commit();
+        
+            // 응답 보내기
+            console.log(`${rowsAffected}개의 행이 저장되었습니다.`);
+            // res.json({ message: `serverInfo >> ${rowsAffected}개의 행이 저장되었습니다.` });
+            console.log("DB 저장 완료");
+        } catch (err) {
+            console.error("에러 발생: ", err);
+            // res.status(500).json("에러 발생");
+        } finally {
+            if (conn) {
+                try {
+                    // DB 연결 반환
+                    await conn.close();
+                    console.log("DB 연결 해제 완료");
+                } catch (err) {
+                    console.error("DB 해제 중 에러: ", err);
+                }
+            }
+        }
+    }
+
+    // 측정소 정보 저장 함수
+    async _saveStationInfo(stations) {
         console.log('stations: ' + JSON.stringify(stations));
         let conn;
         let rowsAffected = 0;
@@ -142,16 +211,21 @@ export class IndexViewController {
                         console.log("INSERT 커밋 성공");
                     }
                 }
+
+                // 캐시 초기화 및 데이터 추가
+                const key = `${LATITUDE},${LONGITUDE}`;
+                // console.log('key: ', key);
+                this.stationCache.set(key, SEQ);
+                this.logger.info(`_saveStationInfo : Station cache loaded with ${this.stationCache.size} entries.`);
             }
+
             // 응답 보내기
             console.log(`${rowsAffected}개의 행이 저장되었습니다.`);
-            res.json({ message: `${rowsAffected}개의 행이 저장되었습니다.` });
-
+            // res.status(200).json({ message: `${rowsAffected}개의 행이 저장되었습니다.` });
             console.log("DB 저장 완료");
-        
         } catch (err) {
             console.error("에러 발생: ", err);
-            res.status(500).send("에러 발생");
+            // res.status(500).json("에러 발생");
         } finally {
             if (conn) {
                 try {

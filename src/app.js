@@ -33,7 +33,7 @@ class App {
         console.log(`process.env.UV_THREADPOOL_SIZE: ${process.env.UV_THREADPOOL_SIZE}`);
 
         this.app = express();
-        this.noiseApiController = new NoiseApiController(); // noiseApiController 초기화 추가
+        // this.noiseApiController = new NoiseApiController(); // noiseApiController 초기화 추가
         this._initMiddleware();
     }
 
@@ -43,13 +43,6 @@ class App {
         this.app.use(compression());
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: true }));
-        
-        // CORS 설정
-        // this.app.use(cors({
-        //     origin: "*",                // 출처 허용 옵션
-        //     credentials: true,          // 응답 헤더에 Access-Control-Allow-Credentials 추가
-        //     optionsSuccessStatus: 200,  // 응답 상태 200으로 설정
-        // }))
 
         // View 설정
         this.app.set('views', path.join(__dirname, `../publish/views`));
@@ -95,17 +88,19 @@ class App {
     }
 
     async _runHttpsServer() {
-        this._ejsServer();
-        this._apiServer();
+        // this._ejsServer();
+        // this._apiServer();
 
         this.mainListener = createServer(this.app); // http 서버 설정
 
+        let pool;
         try {
             // await oracledb.createPool(dbconfig);
             await oracledb.createPool({
                 user: dbconfig.user,
                 password: dbconfig.password,
                 connectString: dbconfig.connectString,
+                poolAlias: 'default', // 별칭 설정
                 poolMin: 1,          // 최소 연결 수
                 poolMax: 5,         // 최대 연결 수를 늘립니다.s
                 poolIncrement: 1,    // 연결이 필요할 때 추가되는 수
@@ -115,10 +110,10 @@ class App {
             this.logger.info(`Oracle createPool() 성공!!`);
 
             // 10초마다 현재 연결 풀 통계를 출력
-            setInterval(() => this._printPoolStatistics(), 10000); // this 바인딩을 위해 화살표 함수 사용
-        } catch (e) {
-            this.logger.error(`Oracle createPool() 연결 실패: ${e.message}`);
-            throw e; // by jazzsty
+            // setInterval(() => this._printPoolStatistics(), 10000); // this 바인딩을 위해 화살표 함수 사용
+        } catch (err) {
+            this.logger.error(`Oracle createPool() 연결 실패: ${err.message}`);
+            throw err; // by jazzsty
         }
 
         this.mainListener.listen(config.listeningPort, () => {
@@ -176,21 +171,20 @@ class App {
         this.mainListener.on('close', async () => {
             this.logger.debug('서버가 닫혔습니다.');
         });
+
+        this._ejsServer();
+        this._apiServer();
     }
 
     _apiServer() {
         this.noiseApiController = new NoiseApiController();
-
-        // const urlMapping = '/api';
         this.app.use('/api/noise', this.noiseApiController.router()); // 소음측정 소켓 클라이언트 관리
     }
 
     _ejsServer() {
         this.app.use(express.static(path.join(__dirname, `../publish/resources`))); // 정적파일 제공 경로 설정
-        // this.app.use('/', new IndexViewController().router());
         const indexViewController = new IndexViewController(this.app);
         this.app.use('/', indexViewController.router());
-
     }
 
     _runSocketIoServer() {

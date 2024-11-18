@@ -33,7 +33,12 @@ export class NoiseApiController extends EventEmitter {
         this.stationCache = new Map(); // 캐시로 사용 할 Map
 
         this._loadStationCache(); // 초기 로드
+        // this._initialize();
     }
+
+    // async _initialize() {
+    //     await this._loadStationCache();
+    // }
 
     router() {
         return this._router;
@@ -74,7 +79,7 @@ export class NoiseApiController extends EventEmitter {
     async getDBConnection() {
         try {
             const pool = oracledb.getPool('default');
-            // console.log('pool.poolAlias: '+ pool.poolAlias);
+            console.log('pool.poolAlias: '+ pool.poolAlias);
             if (!pool) {
                 throw new Error("Oracle DB 연결 풀이 생성되지 않았습니다.");
             }
@@ -91,11 +96,15 @@ export class NoiseApiController extends EventEmitter {
         console.log('check step _loadStationCache');
         let conn;
         try {
-            // const pool = oracledb.getPool('default');
-            // console.log('1 pool.poolAlias: '+ pool.poolAlias);
-            // conn = await pool.getConnection();
-            conn = await this.getDBConnection();
-            // console.log("1 Oracle DB 연결 성공!!");
+            // if (!pool) {
+            //     this.logger.error("Connection pool is not available.");
+            //     return;  // pool이 없으면 연결 시도하지 않음
+            // }
+            const pool = oracledb.getPool('default');
+            console.log('1 pool.poolAlias: '+ pool.poolAlias);
+            conn = await pool.getConnection();
+            // conn = await this.getDBConnection();
+            console.log("1 Oracle DB 연결 성공!!");
 
             // console.log("현재 연결 풀 캐시:", oracledb.getPool().poolAlias);
 
@@ -103,20 +112,19 @@ export class NoiseApiController extends EventEmitter {
 
             const result = await conn.execute(sql);
 
-            // console.log('result.rows: ', result.rows);
+            console.log('result.rows: ', result.rows);
             if (!Array.isArray(result.rows)) {
                 throw new Error("result.rows는 배열이 아닙니다.");
             }
 
             // 캐시 초기화 및 데이터 추가
             // result.rows.forEach(([seq, latitude, longitude]) => {
-            result.rows.forEach(({SEQ, LATITUDE, LONGITUDE}) => {
-                const key = `${LATITUDE},${LONGITUDE}`;
-                // console.log('key: ', key);
-                this.stationCache.set(key, SEQ);
+            result.rows.forEach(({seq, latitude, longitude}) => {
+                const key = `${latitude},${longitude}`;
+                this.stationCache.set(key, seq);
             });
 
-            this.logger.info(`_loadStationCache: Station cache loaded with ${this.stationCache.size} entries.`);
+            this.logger.info(`Station cache loaded with ${this.stationCache.size} entries.`);
         } catch (err) {
             this.logger.error(`Error loading station cache: ${err.message}`);
         } finally {
@@ -162,7 +170,7 @@ export class NoiseApiController extends EventEmitter {
             }
 
             const anomsId = this._getAnomsId(message.id, message.lat, message.lon);
-            // console.log('anomsId: ' + anomsId);
+            console.log('anomsId: ' + anomsId);
             if (!centers.includes(anomsId)) {
                 this.logger.error(`무시된 측정값: ${JSON.stringify({ ...message, id: anomsId })}`);
                 this.noiseMessageResult.ignore += 1;
@@ -184,7 +192,7 @@ export class NoiseApiController extends EventEmitter {
 
             this.logger.debug(`NoiseSample 저장 중: ${JSON.stringify(noiseSample)}`);
             try {
-                await this._saveMessageToDB(noiseSample);
+                await _saveMessageToDB(noiseSample);
                 // await saveMessageToDB(`Sample ID: ${anomsId}, Value: ${sampleValue}`);
 
                 this.noiseMessageResult.success += 1;
@@ -202,6 +210,49 @@ export class NoiseApiController extends EventEmitter {
         return new Date(measurementTime.getTime() - 9 * 60 * 60000); // UTC 보정
     }
 
+    // _getAnomsId(id, lat, lon) {
+    //     // if (id > 0) {
+    //     //     return id;
+    //     // }
+    //     const latlon = [
+    //         // 필요한 경우 더 많은 항목 추가
+    //         { id: 1, lon: 126.379803, lat: 37.623694 },
+    //         { id: 2, lon: 126.337361, lat: 37.534211 },
+    //         { id: 3, lon: 126.366369, lat: 37.531443 },
+    //         { id: 4, lon: 126.427061, lat: 37.532528 },
+    //         { id: 5, lon: 126.442780, lat: 37.520078 },
+    //         { id: 6, lon: 126.422581, lat: 37.496731 },
+    //         { id: 7, lon: 126.487531, lat: 37.488689 },
+    //         { id: 9, lon: 126.465947, lat: 37.439861 },
+    //         { id: 10, lon: 126.424675, lat: 37.389378 },
+    //         { id: 11, lon: 126.410992, lat: 37.534586 },
+    //         { id: 12, lon: 126.382650, lat: 37.536025 },
+    //         { id: 13, lon: 126.372803, lat: 37.470222 },
+    //         { id: 14, lon: 126.402330, lat: 37.486197 },
+    //         { id: 15, lon: 126.419208, lat: 37.453297 },
+    //         { id: 16, lon: 126.423589, lat: 37.429380 },
+    //         { id: 17, lon: 126.450053, lat: 37.433019 },
+    //         { id: 18, lon: 126.422100, lat: 37.662244 },
+    //         { id: 19, lon: 126.362836, lat: 37.668394 },
+    //         // { id: 20, lon: 126.431732, lat: 37.683396 }, // 고정된 측정소가 아닌 이동차량
+    //         { id: 20, lon: 126.601673, lat: 37.254875 },
+    //         { id: 21, lon: 126.404875, lat: 37.528205 },
+    //         { id: 22, lon: 126.417566, lat: 37.450233 },
+    //         { id: 23, lon: 126.477725, lat: 37.274412 },
+    //         { id: 24, lon: 126.454592, lat: 37.273014 },
+    //         { id: 25, lon: 126.179475, lat: 37.481489 },
+    //         { id: 26, lon: 126.217062, lat: 37.483263 },
+    //         { id: 27, lon: 126.253594, lat: 37.483677 },
+    //         { id: 28, lon: 126.290127, lat: 37.484080 },
+    //         { id: 29, lon: 126.325001, lat: 37.484434 },
+    //         // ... 더 많은 항목
+    //     ];
+    //     // const [anomsId] = latlon.filter((m) => m.lon === lon && m.lat === lat);
+    //     const anomsId = latlon.find((m) => m.lon === lon && m.lat === lat);
+    //     // console.log('anomsId.id: ' + anomsId.id);
+    //     return anomsId ? anomsId.id : 0;
+    // }
+
     _getAnomsId(seq, lat, lon) {
         const key = `${lat},${lon}`;
         if (this.stationCache.has(key)) {
@@ -216,15 +267,14 @@ export class NoiseApiController extends EventEmitter {
     // 메시지를 Oracle DB에 저장하는 함수
     // async function saveMessageToDB(noiseSample) {
     async  _saveMessageToDB(noiseSample) {
-        // console.log('check step _saveMessageToDB');
+        console.log('check step _saveMessageToDB');
         let conn;
         try {
 
-            // const pool = oracledb.getPool('default');
-            // console.log('2 pool.poolAlias: '+ pool.poolAlias);
-            // conn = await pool.getConnection();
-            conn = await this.getDBConnection();
-            // console.log("2 Oracle DB 연결 성공!");
+            const pool = oracledb.getPool('default');
+            console.log('2 pool.poolAlias: '+ pool.poolAlias);
+            conn = await pool.getConnection();
+            console.log("2 Oracle DB 연결 성공!");
 
             const sql = `INSERT INTO NOISE_A_1S_SAMPLE_TEST (insertdate, measuredate, nmt, value) 
                         VALUES (:insertdate, :measuredate, :nmt, :value)`;

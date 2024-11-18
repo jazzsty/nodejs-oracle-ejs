@@ -43,19 +43,19 @@
                         <tr>
                             <th class="align-middle">호스트(Host)</th>
                             <td colspan="2">
-                                <input type="text" id="host" name="host" class="form-control" placeholder="58.225.62.172" value="58.225.62.172" />
+                                <input type="text" id="host" name="host" class="form-control" placeholder="ex) 58.225.62.172" />
                             </td>
                         </tr>
                         <tr>
                             <th class="align-middle">포트(Port)</th>
                             <td colspan="2">
-                                <input type="text" id="port" name="port" class="form-control" placeholder="8080" value="8443" />
+                                <input type="text" id="port" name="port" class="form-control" placeholder="ex) 8080"/>
                             </td>
                         </tr>
                         <tr>
                             <th class="align-middle">사이트(Site)</th>
                             <td colspan="2">
-                                <input type="text" id="site" name="site" class="form-control" placeholder="ICN" value="ICN" />
+                                <input type="text" id="site" name="site" class="form-control" placeholder="ex) ICN" />
                             </td>
                         </tr>
                         <tr>
@@ -213,17 +213,31 @@
 
     <script>
     // 서버에 측정소 데이터를 저장하는 함수
-    async function saveMeasurementStations() {
+    async function saveServerStations() {
         const checkboxes = document.querySelectorAll('input[name="check"]:checked');
-        const stations = []; // noises 배열 초기화
+        // let host, port, site;
+        // const serverData = {
+        //     host: document.getElementById('host').value.trim(),
+        //     port: document.getElementById('port').value.trim(),
+        //     site: document.getElementById('site').value.trim(),
+        // };
+        const host = document.getElementById('host').value.trim();
+        const port = document.getElementById('port').value.trim();
+        const site = document.getElementById('site').value.trim();
+        
+        const serverData = { host: host, port: port, site: site };
+
+        console.log('serverData: ' + JSON.stringify(serverData));
 
         // 체크된 항목이 없으면 함수 종료
-        if (checkboxes.length === 0) {
-            alert("저장할 항목을 선택해주세요.");
-            return;  // 함수 종료
-        }
+        // if (checkboxes.length === 0) {
+        //     alert("저장할 항목을 선택해주세요.");
+        //     return;  // 함수 종료
+        // }
 
         // 체크된 각 체크박스에 대해 데이터를 noises 배열에 추가
+        const stationsData = []; // noises 배열 초기화
+
         for (const checkbox of checkboxes) {
             const row = checkbox.closest('.list-group-item');
             const inputs = row.querySelectorAll('input[type="text"]');  // 모든 text input 요소들 선택
@@ -238,7 +252,7 @@
                 //     longitude >= -180 && longitude <= 180
 
                 if (latitude.trim() !== "" && longitude.trim() !== "" && !isNaN(latitude) && !isNaN(longitude)) {
-                    stations.push({ seq, latitude, longitude });
+                    stationsData.push({ seq, latitude, longitude });
                 } else {
                     alert(">>유효한 위도 및 경도를 입력하세요.");
                     return;
@@ -248,12 +262,18 @@
                 return;
             }
         };
-        console.log('saveStations() stations: '+ JSON.stringify(stations));
+
+        const payload = {
+            server: serverData,
+            stations: stationsData,
+        };
+
+        console.log('stationsData: '+ JSON.stringify(stationsData));
         try {
             const response = await fetch('/save-stations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(stations)
+                body: JSON.stringify(payload)
             });
 
             // const text = await response.text(); // 응답을 먼저 텍스트 형식으로 확인
@@ -262,7 +282,7 @@
             if (response.ok) {
                 const data = await response.json();
                 alert(data.message); // "성공적으로 저장" 메시지 표시
-                console.log("변경된 행 수:", data);
+                console.log(`테이터 저장 성공: ${response.status}`);
             } else {
                 throw new Error(`데이터 저장 실패: ${response.status}`);
             }
@@ -272,24 +292,33 @@
         
     };
 
-    async function loadMeasurementStations() {
+    async function loadServerStations() {
 
-        let stations;
+        let responseData;
         try {
             const response = await fetch('/load-stations');
             if (!response.ok) throw new Error('측정소 데이터를 불러오는데 실패했습니다.');
 
-            console.log('check step loadMeasurementStations');
-            stations = await response.json();
-            console.log('stations: ' + JSON.stringify(stations));
+            console.log('check step loadServerStations');
+            responseData = await response.json();
+            console.log('responseData: ' + JSON.stringify(responseData));
         } catch (error) {
             console.error(error);
             alert("측정소 데이터를 불러오는 중 오류가 발생했습니다.");
+            return;
+        }
+
+        // 서버 정보 설정
+        const { server, stations } = responseData;
+
+        if (server) {
+            document.getElementById('host').value = server.HOST || '';
+            document.getElementById('port').value = server.PORT || '';
+            document.getElementById('site').value = server.SITE || '';
         }
 
         const container = document.getElementById("measurementStations");
         container.innerHTML = '';
-
 
         // 전체 선택/해제 체크박스 추가
         const selectAllDiv = document.createElement("div");
@@ -442,7 +471,7 @@
         // 버튼에 이벤트 리스너 추가 (버튼이 DOM에 추가된 후)
         addButton.addEventListener("click", addRow);
         deleteButton.addEventListener("click", deleteRow);
-        saveButton.addEventListener("click", saveMeasurementStations);
+        saveButton.addEventListener("click", saveServerStations);
     };
 
     // 전체 선택/해제 기능
@@ -458,7 +487,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         console.log('check step DOMContentLoaded');
         // 페이지 로드 시 측정소 데이터 로드
-        loadMeasurementStations();
+        loadServerStations();
 
         // 버튼에 이벤트 리스너 추가
         const addButton = document.querySelector("button.btn-primary");
@@ -467,7 +496,7 @@
 
         if (addButton) addButton.addEventListener("click", addRow);
         if (deleteButton) deleteButton.addEventListener("click", deleteRow);
-        if (saveButton) saveButton.addEventListener("click", saveMeasurementStations);
+        if (saveButton) saveButton.addEventListener("click", saveServerStations);
 
     });
     </script>
